@@ -225,3 +225,164 @@ $$;
 
 revoke all on function public.create_organization(text, text) from public;
 grant execute on function public.create_organization(text, text) to authenticated;
+
+-- ============================================================
+-- 9. Módulos financeiros (multi-tenant por organização)
+-- ATENÇÃO: remove as tabelas de demonstração da primeira versão
+-- (clientes/receitas/despesas/cobrancas sem organization_id).
+-- ============================================================
+do $$
+begin
+  if to_regclass('public.clientes') is not null
+     and not exists (
+       select 1 from information_schema.columns
+       where table_schema = 'public' and table_name = 'clientes'
+         and column_name = 'organization_id'
+     ) then
+    drop table if exists public.cobrancas cascade;
+    drop table if exists public.receitas cascade;
+    drop table if exists public.despesas cascade;
+    drop table if exists public.clientes cascade;
+  end if;
+end $$;
+
+do $$ begin
+  create type public.tx_tipo as enum ('receita', 'despesa');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.tx_status as enum ('pendente', 'pago');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.cobranca_status as enum ('pendente', 'pago', 'cancelado');
+exception when duplicate_object then null; end $$;
+
+-- --------------------------- clientes ---------------------------
+create table if not exists public.clientes (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  nome text not null check (char_length(trim(nome)) between 2 and 160),
+  email text,
+  telefone text,
+  documento text,
+  notas text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists clientes_org_idx on public.clientes(organization_id);
+
+-- --------------------------- categorias ---------------------------
+create table if not exists public.categorias (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  nome text not null check (char_length(trim(nome)) between 2 and 80),
+  tipo public.tx_tipo not null,
+  created_at timestamptz not null default now(),
+  unique (organization_id, nome, tipo)
+);
+create index if not exists categorias_org_idx on public.categorias(organization_id);
+
+-- --------------------------- contas ---------------------------
+create table if not exists public.contas (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  nome text not null check (char_length(trim(nome)) between 2 and 80),
+  saldo_inicial numeric(14,2) not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists contas_org_idx on public.contas(organization_id);
+
+-- --------------------------- cobranças ---------------------------
+create table if not exists public.cobrancas (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  cliente_id uuid references public.clientes(id) on delete set null,
+  descricao text not null check (char_length(trim(descricao)) between 2 and 200),
+  valor numeric(14,2) not null check (valor > 0),
+  vencimento date not null,
+  status public.cobranca_status not null default 'pendente',
+  pago_em date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists cobrancas_org_idx on public.cobrancas(organization_id, vencimento);
+
+-- --------------------------- transações ---------------------------
+create table if not exists public.transacoes (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  tipo public.tx_tipo not null,
+  descricao text not null check (char_length(trim(descricao)) between 2 and 200),
+  valor numeric(14,2) not null check (valor > 0),
+  data date not null default current_date,
+  status public.tx_status not null default 'pago',
+  cliente_id uuid references public.clientes(id) on delete set null,
+  categoria_id uuid references public.categorias(id) on delete set null,
+  conta_id uuid references public.contas(id) on delete set null,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists transacoes_org_idx on public.transacoes(organization_id, data desc);
+
+-- --------------------------- grants + RLS + triggers ---------------------------
+do $$
+declare t text;
+begin
+  foreach t in array array['clientes', 'categorias', 'contas', 'cobrancas', 'transacoes'] loop
+    execute format('grant select, insert, update, delete on public.%I to authenticated', t);
+    execute format('grant all on public.%I to service_role', t);
+    execute format('revoke all on public.%I from anon', t);
+    execute format('alter table public.%I enable row level security', t);
+
+    execute format('drop policy if exists "%1$s_select" on public.%1$I', t);
+    execute format(
+      'create policy "%1$s_select" on public.%1$I for select to authenticated using (public.is_org_member(organization_id))', t);
+
+    execute format('drop policy if exists "%1$s_insert" on public.%1$I', t);
+    execute format(
+      'create policy "%1$s_insert" on public.%1$I for insert to authenticated with check (public.is_org_member(organization_id))', t);
+
+    execute format('drop policy if exists "%1$s_update" on public.%1$I', t);
+    execute format(
+      'create policy "%1$s_update" on public.%1$I for update to authenticated using (public.is_org_member(organization_id)) with check (public.is_org_member(organization_id))', t);
+
+    execute format('drop policy if exists "%1$s_delete" on public.%1$I', t);
+    execute format(
+      'create policy "%1$s_delete" on public.%1$I for delete to authenticated using (public.has_org_role(organization_id, array[''owner'',''admin'']::public.org_role[]))', t);
+
+    if t <> 'categorias' and t <> 'contas' then
+      execute format('drop trigger if exists %1$s_set_updated_at on public.%1$I', t);
+      execute format(
+        'create trigger %1$s_set_updated_at before update on public.%1$I for each row execute function public.set_updated_at()', t);
+    end if;
+  end loop;
+end $$;
+
+-- --------------------------- categorias padrão na criação da org ---------------------------
+create or replace function public.seed_org_defaults()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.categorias (organization_id, nome, tipo) values
+    (new.id, 'Serviços', 'receita'),
+    (new.id, 'Produtos', 'receita'),
+    (new.id, 'Outras receitas', 'receita'),
+    (new.id, 'Software e assinaturas', 'despesa'),
+    (new.id, 'Impostos e taxas', 'despesa'),
+    (new.id, 'Marketing', 'despesa'),
+    (new.id, 'Outras despesas', 'despesa')
+  on conflict do nothing;
+
+  insert into public.contas (organization_id, nome) values (new.id, 'Conta principal');
+  return new;
+end;
+$$;
+
+drop trigger if exists organizations_seed_defaults on public.organizations;
+create trigger organizations_seed_defaults after insert on public.organizations
+  for each row execute function public.seed_org_defaults();
