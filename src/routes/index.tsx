@@ -1,124 +1,115 @@
-import { createFileRoute } from "@tanstack/react-router";
-import {
-  Bell,
-  Calendar,
-  ChevronDown,
-  CircleDollarSign,
-  Clock,
-  LineChart,
-  MinusCircle,
-} from "lucide-react";
-
-import { Sidebar } from "@/components/dashboard/Sidebar";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { RevenueChart } from "@/components/dashboard/RevenueChart";
-import { ListCard, receitas, despesas } from "@/components/dashboard/Lists";
-import { Upcoming, CashSummary } from "@/components/dashboard/Upcoming";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Activity, BarChart3, CheckCircle2, Receipt, Wallet } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Dashboard | Meu Fluxo de Caixa" },
+      { title: "Fluxo — Controle financeiro para o seu negócio" },
       {
         name: "description",
         content:
-          "Painel financeiro com receitas, despesas, cobranças a receber e resumo do fluxo de caixa do seu negócio.",
+          "Fluxo é o SaaS de gestão financeira para autônomos e pequenos negócios: receitas, despesas, clientes, cobranças e fluxo de caixa em um só lugar.",
       },
-      { property: "og:title", content: "Dashboard | Meu Fluxo de Caixa" },
+      { property: "og:title", content: "Fluxo — Controle financeiro para o seu negócio" },
       {
         property: "og:description",
-        content: "Acompanhe receitas, despesas e vencimentos do seu negócio em um só lugar.",
+        content: "Receitas, despesas, clientes e cobranças com relatórios em tempo real.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Dashboard,
+  component: Landing,
 });
 
-function Dashboard() {
+const features = [
+  {
+    icon: Wallet,
+    title: "Fluxo de caixa real",
+    text: "Entradas, saídas e saldo do período calculados a partir dos seus lançamentos.",
+  },
+  {
+    icon: Receipt,
+    title: "Cobranças e vencimentos",
+    text: "Acompanhe o que está a receber, o que vence hoje e o que está atrasado.",
+  },
+  {
+    icon: BarChart3,
+    title: "Relatórios claros",
+    text: "Receitas x despesas mês a mês, por categoria e por cliente.",
+  },
+];
+
+function Landing() {
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="min-w-0 flex-1 px-5 py-6 lg:px-7">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[22px] font-bold tracking-tight">Olá, Wesley Viegas 👋</h1>
-            <p className="mt-1 text-[13px] text-muted-foreground">
-              Aqui está o resumo financeiro do seu negócio.
-            </p>
+    <div className="min-h-screen bg-background">
+      <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-6">
+        <div className="flex items-center gap-2">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-secondary">
+            <Activity className="size-5 text-success" />
           </div>
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3.5 py-2.5 text-[13px]">
-              <Calendar className="size-4 text-muted-foreground" />
-              01/05/2025 - 31/05/2025
-              <ChevronDown className="ml-3 size-4 text-muted-foreground" />
-            </button>
-            <button className="relative flex size-10 items-center justify-center rounded-xl border border-border bg-card">
-              <Bell className="size-[18px]" />
-              <span className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-info text-[10px] font-semibold text-foreground">
-                3
-              </span>
-            </button>
-          </div>
-        </header>
+          <span className="text-[15px] font-extrabold tracking-tight">FLUXO</span>
+        </div>
+        <Link
+          to="/auth"
+          className="rounded-lg bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground"
+        >
+          Entrar
+        </Link>
+      </header>
 
-        <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            icon={CircleDollarSign}
-            tone="success"
-            label="Receitas no período"
-            value="R$ 58.750,00"
-            trend="18,3%"
-            trendUp
-          />
-          <StatCard
-            icon={Clock}
-            tone="info"
-            label="A receber"
-            value="R$ 27.450,00"
-            note="12 cobranças pendentes"
-          />
-          <StatCard
-            icon={MinusCircle}
-            tone="destructive"
-            label="Despesas no período"
-            value="R$ 18.230,00"
-            trend="7,6%"
-          />
-          <StatCard
-            icon={LineChart}
-            tone="info"
-            label="Resultado líquido"
-            value="R$ 40.520,00"
-            trend="28,9%"
-            trendUp
-          />
+      <main className="mx-auto max-w-6xl px-5 pb-20">
+        <section className="py-14 md:py-20">
+          <p className="text-[13px] font-medium text-success">Gestão financeira sem planilha</p>
+          <h1 className="mt-3 max-w-3xl text-4xl font-bold tracking-tight md:text-5xl">
+            Todo o dinheiro do seu negócio sob controle
+          </h1>
+          <p className="mt-4 max-w-2xl text-[15px] text-muted-foreground">
+            Cadastre receitas e despesas, organize clientes, emita cobranças e acompanhe o fluxo de
+            caixa da sua empresa em tempo real.
+          </p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link
+              to="/auth"
+              className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
+            >
+              Criar minha conta
+            </Link>
+            <Link
+              to="/auth"
+              search={{ mode: "login" }}
+              className="rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold"
+            >
+              Já tenho conta
+            </Link>
+          </div>
         </section>
 
-        <section className="mt-4 grid gap-4 xl:grid-cols-[1fr_380px]">
-          <div className="space-y-4">
-            <RevenueChart />
-            <div className="grid gap-4 md:grid-cols-2">
-              <ListCard
-                title="Receitas recentes"
-                action="Ver todas"
-                items={receitas}
-                dateTone="text-success"
-              />
-              <ListCard
-                title="Despesas recentes"
-                action="Ver todas"
-                items={despesas}
-                dateTone="text-destructive"
-              />
+        <section className="grid gap-4 md:grid-cols-3">
+          {features.map(({ icon: Icon, title, text }) => (
+            <div key={title} className="surface p-5">
+              <Icon className="size-5 text-success" />
+              <h2 className="mt-3 text-[15px] font-semibold">{title}</h2>
+              <p className="mt-1.5 text-[13px] text-muted-foreground">{text}</p>
             </div>
-          </div>
-          <div className="space-y-4">
-            <Upcoming />
-            <CashSummary />
-          </div>
+          ))}
+        </section>
+
+        <section className="surface mt-4 p-6">
+          <h2 className="text-[15px] font-semibold">Feito para quem toca o negócio sozinho</h2>
+          <ul className="mt-4 grid gap-2.5 text-[13px] text-muted-foreground md:grid-cols-2">
+            {[
+              "Cada empresa tem seu próprio espaço de trabalho isolado",
+              "Dados protegidos por políticas de acesso no banco",
+              "Cadastro de clientes com histórico de cobranças",
+              "Resumo do fluxo de caixa mês a mês",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                {item}
+              </li>
+            ))}
+          </ul>
         </section>
       </main>
     </div>
