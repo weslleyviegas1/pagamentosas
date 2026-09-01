@@ -46,7 +46,7 @@ function Landing() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-6">
         <div className="flex items-center gap-2">
           <div className="flex size-9 items-center justify-center rounded-lg bg-secondary">
-            <Activity className="size-5 text-success" />
+            <Activity className="size-5 text-primary" />
           </div>
           <span className="text-[15px] font-extrabold tracking-tight">FLUXO</span>
         </div>
@@ -60,7 +60,7 @@ function Landing() {
 
       <main className="mx-auto max-w-6xl px-5 pb-20">
         <section className="py-14 md:py-20">
-          <p className="text-[13px] font-medium text-success">Gestão financeira sem planilha</p>
+          <p className="text-[13px] font-medium text-primary">Gestão financeira sem planilha</p>
           <h1 className="mt-3 max-w-3xl text-4xl font-bold tracking-tight md:text-5xl">
             Todo o dinheiro do seu negócio sob controle
           </h1>
@@ -87,7 +87,7 @@ function Landing() {
         <section className="grid gap-4 md:grid-cols-3">
           {features.map(({ icon: Icon, title, text }) => (
             <div key={title} className="surface p-5">
-              <Icon className="size-5 text-success" />
+              <Icon className="size-5 text-primary" />
               <h2 className="mt-3 text-[15px] font-semibold">{title}</h2>
               <p className="mt-1.5 text-[13px] text-muted-foreground">{text}</p>
             </div>
@@ -104,7 +104,7 @@ function Landing() {
               "Resumo do fluxo de caixa mês a mês",
             ].map((item) => (
               <li key={item} className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
                 {item}
               </li>
             ))}
