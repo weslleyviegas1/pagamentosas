@@ -11,7 +11,7 @@ export const Route = createFileRoute("/api/public/webhooks/mercadopago")({
       POST: async ({ request }) => {
         const mpToken = process.env["MERCADO_PAGO_ACCESS_TOKEN"];
         const supabaseUrl = process.env["VITE_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
-        const serviceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+        const serviceKey = process.env["SB_SERVICE_ROLE_KEY"];
         if (!mpToken || !supabaseUrl || !serviceKey) {
           console.error("Webhook Mercado Pago: variáveis de ambiente ausentes");
           return new Response("not configured", { status: 500 });
