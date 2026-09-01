@@ -386,3 +386,11 @@ $$;
 drop trigger if exists organizations_seed_defaults on public.organizations;
 create trigger organizations_seed_defaults after insert on public.organizations
   for each row execute function public.seed_org_defaults();
+
+-- ============================================================
+-- Mercado Pago: colunas de integração em cobrancas
+-- ============================================================
+alter table public.cobrancas add column if not exists mp_preference_id text;
+alter table public.cobrancas add column if not exists mp_payment_id text;
+alter table public.cobrancas add column if not exists link_pagamento text;
+create index if not exists cobrancas_mp_payment_idx on public.cobrancas(mp_payment_id);
