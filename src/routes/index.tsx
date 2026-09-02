@@ -5,7 +5,6 @@ import {
   ExternalLink,
   Film,
   Link as LinkIcon,
-  Menu,
   Play,
   Plus,
   Search,
@@ -49,31 +48,56 @@ const starterVideos: VideoItem[] = [
 function getYoutubeId(url: string) {
   try {
     const parsed = new URL(url);
-    if (parsed.hostname.includes("youtu.be")) return parsed.pathname.slice(1);
-    if (parsed.hostname.includes("youtube.com")) {
-      return parsed.searchParams.get("v") ?? parsed.pathname.split("/").pop() ?? "";
+    const host = parsed.hostname.replace(/^www\\./, "");
+
+    if (host === "youtu.be") {
+      return parsed.pathname.split("/").filter(Boolean)[0] ?? "";
+    }
+
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      if (parsed.pathname.startsWith("/watch")) {
+        return parsed.searchParams.get("v") ?? "";
+      }
+
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      if (parts[0] === "shorts" || parts[0] === "embed" || parts[0] === "live") {
+        return parts[1] ?? "";
+      }
     }
   } catch {
     return "";
   }
+
   return "";
 }
 
 function getEmbedUrl(url: string) {
-  const youtubeId = getYoutubeId(url);
-  if (youtubeId) return `https://www.youtube.com/embed/${youtubeId}?rel=0`;
-
   try {
     const parsed = new URL(url);
-    if (parsed.hostname.includes("vimeo.com")) {
+    const host = parsed.hostname.replace(/^www\\./, "");
+
+    const youtubeId = getYoutubeId(url);
+    if (youtubeId && (host === "youtube.com" || host === "m.youtube.com" || host === "youtu.be")) {
+      return `https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`;
+    }
+
+    if (host === "vimeo.com") {
       const id = parsed.pathname.split("/").filter(Boolean).pop();
       return id ? `https://player.vimeo.com/video/${id}` : null;
     }
+
+    if (host === "dailymotion.com" || host === "dai.ly") {
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      const id = host === "dai.ly" ? parts[0] : parts[1];
+      return id ? `https://www.dailymotion.com/embed/video/${id}` : null;
+    }
+
+    // For other video-page URLs, try rendering the page inside the player.
+    // The destination can still refuse embedding via its own CSP/X-Frame-Options.
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? url : null;
   } catch {
     return null;
   }
-
-  return null;
 }
 
 function isDirectVideo(url: string) {
@@ -116,7 +140,22 @@ function VideoPlayer({ video }: { video: VideoItem }) {
         src={video.url}
         controls
         playsInline
+        preload="metadata"
         className="h-full w-full object-contain"
+      />
+    );
+  }
+
+  // Generic video pages are rendered inline when the provider allows iframe embedding.
+  if (embed) {
+    return (
+      <iframe
+        src={embed}
+        title={video.title}
+        className="h-full w-full border-0"
+        allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+        allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
       />
     );
   }
@@ -125,7 +164,7 @@ function VideoPlayer({ video }: { video: VideoItem }) {
     <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
       <LinkIcon className="size-8 text-primary" />
       <p className="text-sm text-muted-foreground">
-        Este endereço não possui um player incorporável.
+        Não foi possível incorporar este endereço como player.
       </p>
       <a
         href={video.url}
